@@ -19,7 +19,7 @@ class ConversationCallbacks {
   /// Called when a message is received (transcription or agent response)
   final void Function({required String message, required Role source})? onMessage;
 
-  /// Called when conversation mode changes (listening/speaking)
+  /// Called when the conversation mode changes (listening/speaking)
   final void Function({required ConversationMode mode})? onModeChange;
 
   /// Called when audio data is received

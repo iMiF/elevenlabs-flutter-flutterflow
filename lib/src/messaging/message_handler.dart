@@ -30,7 +30,6 @@ class MessageHandler {
     _dataSubscription = liveKit.dataStream.listen(
       _processIncomingMessage,
       onError: (error) {
-        debugPrint('Error in data stream: $error');
         callbacks.onError?.call('Data stream error', error);
       },
     );
@@ -47,11 +46,6 @@ class MessageHandler {
     try {
       final eventType = json['type'] as String?;
       if (eventType == null) return;
-
-      // Update event ID if present
-      if (json['event_id'] != null) {
-        _currentEventId = json['event_id'] as int;
-      }
 
       switch (eventType) {
         case 'conversation_initiation_metadata':
@@ -145,8 +139,7 @@ class MessageHandler {
         default:
           callbacks.onDebug?.call('Unknown event type: $eventType - $json');
       }
-    } catch (e, stackTrace) {
-      debugPrint('Error processing message: $e\n$stackTrace');
+    } catch (e) {
       callbacks.onError?.call('Failed to process message', e);
     }
   }
@@ -170,9 +163,15 @@ class MessageHandler {
   }
 
   void _handleAgentResponse(Map<String, dynamic> json) {
-    final response = json['agent_response'] as Map<String, dynamic>?;
+    final response = json['agent_response_event'] as Map<String, dynamic>?;
     if (response != null) {
-      final text = response['response'] as String?;
+      // Update event ID for feedback tracking
+      final eventId = response['event_id'] as int?;
+      if (eventId != null) {
+        _updateEventId(eventId);
+      }
+
+      final text = response['agent_response'] as String?;
       if (text != null && text.isNotEmpty) {
         callbacks.onMessage?.call(
           message: text,
@@ -187,7 +186,7 @@ class MessageHandler {
       final part = AgentChatResponsePart.fromJson(json);
       callbacks.onAgentChatResponsePart?.call(part);
     } catch (e) {
-      debugPrint('Error parsing agent response part: $e');
+      callbacks.onError?.call('Failed to parse agent response part', e);
     }
   }
 
@@ -278,7 +277,7 @@ class MessageHandler {
       final part = AgentChatResponsePart.fromJson(json);
       callbacks.onAgentChatResponsePart?.call(part);
     } catch (e) {
-      debugPrint('Error parsing agent chat response part: $e');
+      callbacks.onError?.call('Failed to parse agent chat response part', e);
     }
   }
 
@@ -323,7 +322,25 @@ class MessageHandler {
   }
 
   void _handleAgentResponseCorrection(Map<String, dynamic> json) {
+    final event = json['agent_response_correction_event'] as Map<String, dynamic>?;
+    if (event != null) {
+      // Update event ID for feedback tracking
+      final eventId = event['event_id'] as int?;
+      if (eventId != null) {
+        _updateEventId(eventId);
+      }
+    }
     callbacks.onAgentResponseCorrection?.call(json);
+  }
+
+  void _updateEventId(int newEventId) {
+    final previousEventId = _currentEventId;
+    _currentEventId = newEventId;
+
+    // Notify when event ID changes (feedback becomes available)
+    if (_currentEventId != previousEventId) {
+      callbacks.onCanSendFeedbackChange?.call(canSendFeedback: true);
+    }
   }
 
   void _handleAsrInitiationMetadata(Map<String, dynamic> json) {

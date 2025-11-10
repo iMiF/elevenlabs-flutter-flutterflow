@@ -42,9 +42,6 @@ class ConversationClient extends ChangeNotifier {
   /// Whether the agent is currently speaking
   bool get isSpeaking => _isSpeaking;
 
-  /// Current conversation mode (listening/speaking)
-  ConversationMode get mode => _mode;
-
   /// Current conversation ID
   String? get conversationId => _conversationId;
 
@@ -100,7 +97,10 @@ class ConversationClient extends ChangeNotifier {
         callbacks?.onConversationMetadata?.call(metadata);
       },
       onAsrInitiationMetadata: callbacks?.onAsrInitiationMetadata,
-      onCanSendFeedbackChange: callbacks?.onCanSendFeedbackChange,
+      onCanSendFeedbackChange: ({required bool canSendFeedback}) {
+        notifyListeners(); // Notify UI that feedback state changed
+        callbacks?.onCanSendFeedbackChange?.call(canSendFeedback: canSendFeedback);
+      },
       onUnhandledClientToolCall: callbacks?.onUnhandledClientToolCall,
       onMcpToolCall: callbacks?.onMcpToolCall,
       onMcpConnectionStatus: callbacks?.onMcpConnectionStatus,
@@ -108,7 +108,6 @@ class ConversationClient extends ChangeNotifier {
       onDebug: callbacks?.onDebug,
       onEndCallRequested: () {
         // Agent requested to end the call - trigger session end
-        debugPrint('🔚 Agent requested end call, ending session');
         endSession();
         callbacks?.onEndCallRequested?.call();
       },
@@ -178,7 +177,6 @@ class ConversationClient extends ChangeNotifier {
         _isSpeaking = isSpeaking;
         notifyListeners();
         _callbacks?.onModeChange?.call(mode: _mode);
-        debugPrint('🗣️ Speaking state from LiveKit: $isSpeaking');
       });
 
       // Start message handling
@@ -200,7 +198,6 @@ class ConversationClient extends ChangeNotifier {
       );
 
       _setStatus(ConversationStatus.connected);
-      debugPrint('🎉 Conversation fully initialized and ready');
     } catch (e) {
       _setStatus(ConversationStatus.disconnected);
       _callbacks?.onError?.call('Failed to start session', e);
@@ -212,7 +209,6 @@ class ConversationClient extends ChangeNotifier {
   Future<void> endSession() async {
     if (_status == ConversationStatus.disconnected ||
         _status == ConversationStatus.disconnecting) {
-      debugPrint('⚠️ Already disconnecting or disconnected, skipping');
       return;
     }
 
@@ -220,9 +216,7 @@ class ConversationClient extends ChangeNotifier {
       _setStatus(ConversationStatus.disconnecting);
       await _cleanup();
       _handleDisconnection('Session ended by user');
-    } catch (e, stackTrace) {
-      debugPrint('❌ Error ending session: $e');
-      debugPrint('Stack trace: $stackTrace');
+    } catch (e) {
       _callbacks?.onError?.call('Error ending session', e);
       _setStatus(ConversationStatus.disconnected);
     }
@@ -325,7 +319,6 @@ class ConversationClient extends ChangeNotifier {
     // Guard against sending overrides multiple times
     // This can happen during hot-reload when old stream listeners persist
     if (_overridesSent) {
-      debugPrint('⚠️ Overrides already sent for this session, skipping duplicate');
       return;
     }
 
@@ -342,9 +335,7 @@ class ConversationClient extends ChangeNotifier {
 
     try {
       await _liveKitManager.sendMessage(overridesMessage);
-      debugPrint('✅ Overrides sent successfully');
     } catch (e) {
-      debugPrint('❌ Failed to send overrides: $e');
       _overridesSent = false; // Reset flag on error so retry is possible
       _callbacks?.onError?.call('Failed to send overrides', e);
       rethrow;
@@ -364,7 +355,6 @@ class ConversationClient extends ChangeNotifier {
     _conversationId = null;
     _lastFeedbackEventId = 0;
     _overridesSent = false; // Reset for next session
-    notifyListeners();
   }
 
   @override

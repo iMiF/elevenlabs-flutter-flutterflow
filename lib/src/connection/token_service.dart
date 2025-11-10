@@ -12,8 +12,6 @@ class TokenService {
   }) : apiEndpoint = apiEndpoint ?? 'https://api.elevenlabs.io';
 
   /// Fetches a LiveKit token for public agents
-  ///
-  /// Returns both the token and the WebSocket URL for the LiveKit connection
   Future<({String token})> fetchToken({
     required String agentId,
   }) async {
@@ -25,18 +23,15 @@ class TokenService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-        debugPrint('✅ Token fetched successfully for agent: $agentId');
         return (
           token: data['token'] as String,
         );
       }
 
-      final errorMessage =
-          'Failed to fetch token: ${response.statusCode} - ${response.body}';
-      debugPrint('❌ TokenService Error: $errorMessage');
-      throw Exception(errorMessage);
+      throw Exception(
+        'Failed to fetch token (${response.statusCode}): ${response.body}',
+      );
     } catch (e) {
-      debugPrint('❌ TokenService Exception: $e');
       rethrow;
     }
   }

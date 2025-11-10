@@ -30,4 +30,3 @@ enum Role {
   /// AI agent role
   ai,
 }
-

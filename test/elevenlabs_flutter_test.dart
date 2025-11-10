@@ -7,13 +7,13 @@ void main() {
       final client = ConversationClient();
       expect(client.status, ConversationStatus.disconnected);
       expect(client.isSpeaking, false);
-      expect(client.isMuted, false);
+      expect(client.isMuted, true); // true when not connected (no room)
       expect(client.conversationId, null);
       expect(client.canSendFeedback, false);
       client.dispose();
     });
 
-    test('requires agentId or conversationToken', () async {
+    test('requires agentId or conversationToken', () {
       final client = ConversationClient();
 
       expect(

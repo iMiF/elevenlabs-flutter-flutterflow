@@ -43,8 +43,6 @@ class LiveKitManager {
   /// Connects to a LiveKit server
   Future<void> connect(String serverUrl, String token) async {
     try {
-      debugPrint('🔌 Connecting to LiveKit: $serverUrl');
-
       // Clean up any existing connection
       await disconnect();
 
@@ -62,19 +60,15 @@ class LiveKitManager {
 
       _eventsListener!
         ..on<RoomConnectedEvent>((event) {
-          debugPrint('✅ Room connected!');
           _stateStreamController.add(ConnectionState.connected);
         })
         ..on<RoomDisconnectedEvent>((event) {
-          debugPrint('❌ Room disconnected: ${event.reason}');
           _stateStreamController.add(ConnectionState.disconnected);
         })
         ..on<RoomReconnectingEvent>((event) {
-          debugPrint('🔄 Room reconnecting...');
           _stateStreamController.add(ConnectionState.reconnecting);
         })
         ..on<RoomReconnectedEvent>((event) {
-          debugPrint('✅ Room reconnected!');
           _stateStreamController.add(ConnectionState.connected);
         })
         ..on<DataReceivedEvent>((event) {
@@ -83,44 +77,31 @@ class LiveKitManager {
             final data = utf8.decode(event.data);
             final message = jsonDecode(data) as Map<String, dynamic>;
             _dataStreamController.add(message);
-            // debugPrint('📥 Data received: $message');
+          } on FormatException catch (e) {
+            _dataStreamController.addError(
+              Exception('Failed to decode message data: ${e.message}'),
+            );
           } catch (e) {
-            debugPrint('❌ Error decoding data: $e');
+            _dataStreamController.addError(
+              Exception('Error processing data message: $e'),
+            );
           }
-        })
-        ..on<TrackSubscribedEvent>((event) {
-          debugPrint('🔊 Track subscribed: ${event.track.kind}');
-          // Audio playback is handled automatically by LiveKit
-        })
-        ..on<TrackUnsubscribedEvent>((event) {
-          debugPrint('🔇 Track unsubscribed: ${event.track.kind}');
-        })
-        ..on<ParticipantConnectedEvent>((event) {
-          debugPrint('👤 Participant connected: ${event.participant.identity}');
         })
         ..on<ParticipantDisconnectedEvent>((event) {
-          debugPrint('👋 Participant disconnected: ${event.participant.identity}');
           // If the agent disconnects, we should end the session
           if (event.participant.identity.startsWith('agent-')) {
-            debugPrint('⚠️ Agent disconnected, ending session');
             _stateStreamController.add(ConnectionState.disconnected);
           }
-        })
-        ..on<TrackMutedEvent>((event) {
-          debugPrint('🔇 Track muted: ${event.publication.kind}');
-        })
-        ..on<TrackUnmutedEvent>((event) {
-          debugPrint('🔊 Track unmuted: ${event.publication.kind}');
         })
         ..on<AudioPlaybackStatusChanged>((event) async {
           // Handle audio playback issues (especially for iOS)
           if (!_room!.canPlaybackAudio) {
-            debugPrint('⚠️ Audio playback not available, attempting to start...');
             try {
               await _room!.startAudio();
-              debugPrint('✅ Audio playback started');
             } catch (e) {
-              debugPrint('❌ Failed to start audio playback: $e');
+              _dataStreamController.addError(
+                Exception('Failed to start audio playback: $e'),
+              );
             }
           }
         })
@@ -134,14 +115,14 @@ class LiveKitManager {
 
       // Connect to LiveKit server
       await _room!.connect(serverUrl, token);
-      debugPrint('✅ Connected to LiveKit successfully');
 
       // Enable speakerphone on Android
       try {
         await Hardware.instance.setSpeakerphoneOn(true);
-        debugPrint('🔊 Speakerphone enabled (Android)');
       } catch (e) {
-        debugPrint('Note: Could not enable speakerphone: $e');
+        _dataStreamController.addError(
+          Exception('Could not enable speakerphone: $e'),
+        );
       }
 
       // Enable microphone (LiveKit handles track creation automatically)
@@ -155,7 +136,9 @@ class LiveKitManager {
       _roomReadyController.add(null);
 
     } catch (e) {
-      debugPrint('❌ LiveKit Connection Error: $e');
+      _dataStreamController.addError(
+        Exception('LiveKit Connection Error: $e'),
+      );
       rethrow;
     }
   }
@@ -177,7 +160,9 @@ class LiveKitManager {
         reliable: true,
       );
     } catch (e) {
-      debugPrint('❌ Failed to send message: $e');
+      _dataStreamController.addError(
+        Exception('Failed to send message: $e'),
+      );
       rethrow;
     }
   }
@@ -234,17 +219,23 @@ class LiveKitManager {
         await currentRoom.disconnect().timeout(
           const Duration(seconds: 3),
           onTimeout: () {
-            debugPrint('⚠️ Disconnect timeout - forcing cleanup');
+            _dataStreamController.addError(
+              Exception('Disconnect timeout - forcing cleanup'),
+            );
           },
         );
       } catch (e) {
-        debugPrint('Warning: Error during disconnect: $e');
+        _dataStreamController.addError(
+          Exception('Error during disconnect: $e'),
+        );
       }
 
       try {
         await currentRoom.dispose();
       } catch (e) {
-        debugPrint('Warning: Error disposing room: $e');
+        _dataStreamController.addError(
+          Exception('Error disposing room: $e'),
+        );
       }
 
       _room = null;

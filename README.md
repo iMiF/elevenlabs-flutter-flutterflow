@@ -1,19 +1,42 @@
+![hero](assets/hero.png)
+
 # ElevenLabs Flutter SDK
 
 [![pub package](https://img.shields.io/pub/v/elevenlabs_flutter.svg)](https://pub.dev/packages/elevenlabs_flutter)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-Flutter SDK for the [ElevenLabs Agent Platform](https://elevenlabs.io). Build conversational AI applications with real-time audio communication powered by WebRTC via [LiveKit](https://livekit.io).
+Official Flutter SDK for the [ElevenLabs Agents Platform](https://elevenlabs.io). Build voice-enabled applications with real-time bidirectional audio communication powered by WebRTC via LiveKit.
 
 ## Features
 
-- 🎙️ **Real-time Audio**: Bidirectional voice communication with AI agents
-- 💬 **Text Messaging**: Send text messages and contextual updates
-- 🔧 **Client Tools**: Register local device capabilities the agent can invoke
-- 📊 **Reactive State**: Built on `ChangeNotifier` for Flutter-idiomatic reactive updates
-- 🌍 **Data Residency**: Support for custom endpoints and self-hosted deployments
-- 🎯 **Type Safe**: Comprehensive Dart type definitions
-- ⚡ **LiveKit Powered**: Production-ready WebRTC infrastructure
+- **Real-time Voice Communication** - Full-duplex audio streaming with low latency
+- **Text Messaging** - Send text messages and contextual updates during conversations
+- **Client Tools** - Register device-side functions that agents can invoke
+- **Reactive State Management** - Built on ChangeNotifier for Flutter-idiomatic patterns
+- **Comprehensive Callbacks** - Fine-grained event handlers for all conversation events
+- **Feedback System** - Built-in support for rating agent responses
+- **Type Safety** - Complete Dart type definitions for all APIs
+- **Data Residency** - Support for custom endpoints and regional deployments
+- **Production Ready** - Built on LiveKit's proven WebRTC infrastructure
+
+## Examples
+
+The [example directory](example/) contains a full-featured demo application showing:
+
+- Voice conversation with real-time audio
+- Text messaging
+- Mute/unmute controls
+- Connection state management
+- Feedback buttons
+- Client tool implementation
+- Conversation history display
+
+Run the example:
+
+```bash
+cd example
+flutter run
+```
 
 ## Installation
 
@@ -24,24 +47,24 @@ dependencies:
   elevenlabs_flutter: ^0.1.0
 ```
 
-Then run:
+Install dependencies:
 
 ```bash
 flutter pub get
 ```
 
-## Platform Setup
+## Platform Configuration
 
 ### iOS
 
-Update `ios/Runner/Info.plist`:
+Add microphone permission to `ios/Runner/Info.plist`:
 
 ```xml
 <key>NSMicrophoneUsageDescription</key>
-<string>We need access to your microphone for voice conversations</string>
+<string>This app needs microphone access for voice conversations</string>
 ```
 
-Update `ios/Podfile`:
+Set minimum iOS version in `ios/Podfile`:
 
 ```ruby
 platform :ios, '13.0'
@@ -49,7 +72,7 @@ platform :ios, '13.0'
 
 ### Android
 
-Update `android/app/src/main/AndroidManifest.xml`:
+Add permissions to `android/app/src/main/AndroidManifest.xml`:
 
 ```xml
 <uses-permission android:name="android.permission.RECORD_AUDIO" />
@@ -58,33 +81,60 @@ Update `android/app/src/main/AndroidManifest.xml`:
 <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
 ```
 
-Set `minSdkVersion` to 21 in `android/app/build.gradle`.
+Set minimum SDK version in `android/app/build.gradle`:
+
+```gradle
+android {
+    defaultConfig {
+        minSdkVersion 21
+    }
+}
+```
 
 ## Quick Start
+
+Here's a minimal example showing basic voice conversation functionality:
 
 ```dart
 import 'package:flutter/material.dart';
 import 'package:elevenlabs_flutter/elevenlabs_flutter.dart';
+import 'package:permission_handler/permission_handler.dart';
 
-class MyConversation extends StatefulWidget {
+class VoiceAssistant extends StatefulWidget {
+  const VoiceAssistant({super.key});
+
   @override
-  State<MyConversation> createState() => _MyConversationState();
+  State<VoiceAssistant> createState() => _VoiceAssistantState();
 }
 
-class _MyConversationState extends State<MyConversation> {
+class _VoiceAssistantState extends State<VoiceAssistant> {
   late ConversationClient _client;
+  final _messages = <String>[];
 
   @override
   void initState() {
     super.initState();
+    _requestMicrophonePermission();
+    _initializeClient();
+  }
 
+  Future<void> _requestMicrophonePermission() async {
+    await Permission.microphone.request();
+  }
+
+  void _initializeClient() {
     _client = ConversationClient(
       callbacks: ConversationCallbacks(
         onConnect: ({required conversationId}) {
-          print('Connected: $conversationId');
+          print('Connected with ID: $conversationId');
         },
         onMessage: ({required message, required source}) {
-          print('[$source] $message');
+          setState(() {
+            _messages.add('${source.name}: $message');
+          });
+        },
+        onModeChange: ({required mode}) {
+          print('Mode changed: ${mode.name}');
         },
         onError: (message, [context]) {
           print('Error: $message');
@@ -92,9 +142,8 @@ class _MyConversationState extends State<MyConversation> {
       ),
     );
 
-    // Listen to state changes
     _client.addListener(() {
-      setState(() {});
+      setState(() {}); // Rebuild on state changes
     });
   }
 
@@ -105,36 +154,113 @@ class _MyConversationState extends State<MyConversation> {
   }
 
   Future<void> _startConversation() async {
-    await _client.startSession(
-      agentId: 'your-agent-id',
-      userId: 'user-123',
-    );
+    try {
+      await _client.startSession(
+        agentId: 'your-agent-id-here',
+        userId: 'user-123',
+      );
+    } catch (e) {
+      print('Failed to start conversation: $e');
+    }
+  }
+
+  Future<void> _endConversation() async {
+    await _client.endSession();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text('Status: ${_client.status.name}'),
-        ElevatedButton(
-          onPressed: _client.status == ConversationStatus.disconnected
-              ? _startConversation
-              : null,
-          child: Text('Start'),
-        ),
-      ],
+    final isConnected = _client.status == ConversationStatus.connected;
+    final isDisconnected = _client.status == ConversationStatus.disconnected;
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Voice Assistant')),
+      body: Column(
+        children: [
+          // Status indicator
+          Container(
+            padding: const EdgeInsets.all(16),
+            color: isConnected ? Colors.green : Colors.grey,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'Status: ${_client.status.name}',
+                  style: const TextStyle(color: Colors.white),
+                ),
+                if (_client.isSpeaking) ...[
+                  const SizedBox(width: 16),
+                  const Text(
+                    'Agent Speaking',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ],
+              ],
+            ),
+          ),
+
+          // Messages list
+          Expanded(
+            child: ListView.builder(
+              itemCount: _messages.length,
+              itemBuilder: (context, index) {
+                return ListTile(
+                  title: Text(_messages[index]),
+                );
+              },
+            ),
+          ),
+
+          // Controls
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: isDisconnected ? _startConversation : null,
+                        child: const Text('Start Conversation'),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: isConnected ? _endConversation : null,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                        ),
+                        child: const Text('End Conversation'),
+                      ),
+                    ),
+                  ],
+                ),
+                if (isConnected) ...[
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: () => _client.toggleMute(),
+                    icon: Icon(_client.isMuted ? Icons.mic_off : Icons.mic),
+                    label: Text(_client.isMuted ? 'Unmute' : 'Mute'),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 ```
 
-## Usage
+## Core Concepts
 
-### Starting a Session
+### Starting a Conversation
 
 #### Public Agent
 
-For public agents, provide the agent ID:
+For publicly available agents, provide just the agent ID:
 
 ```dart
 await client.startSession(
@@ -145,18 +271,23 @@ await client.startSession(
 
 #### Private Agent
 
-For private agents, provide a conversation token from your backend:
+For private agents, [generate a conversation token](https://elevenlabs.io/docs/api-reference/conversations/get-webrtc-token) from your backend and pass it to the SDK:
 
 ```dart
+// Get token from your backend
+final token = await yourBackend.getConversationToken();
+
 await client.startSession(
-  conversationToken: 'token-from-your-backend',
+  conversationToken: token,
   userId: 'user-123',
 );
 ```
 
+**Note:** Generating a token requires an ElevenLabs API key. Never expose this key on the client, instead fetch it from a backend service.
+
 ### Configuration Overrides
 
-Customize agent behavior per session:
+Customize agent behavior on a per-session basis:
 
 ```dart
 await client.startSession(
@@ -164,75 +295,107 @@ await client.startSession(
   overrides: ConversationOverrides(
     agent: AgentOverrides(
       firstMessage: 'Hello! How can I help you today?',
-      prompt: 'You are a helpful assistant...',
+      prompt: 'You are a helpful customer service assistant...',
+      language: 'en',
       temperature: 0.7,
+      maxTokens: 1000,
     ),
     tts: TtsOverrides(
       voiceId: 'custom-voice-id',
       stability: 0.5,
       similarityBoost: 0.8,
+      style: 0.0,
+      useSpeakerBoost: true,
+    ),
+    conversation: ConversationSettingsOverrides(
+      maxDurationSeconds: 600,
+      turnTimeoutSeconds: 10,
+      textOnly: false,
     ),
   ),
+  dynamicVariables: {
+    'user_name': 'Alice',
+    'account_tier': 'premium',
+  },
 );
 ```
 
 ### Sending Messages
 
+Send text messages and contextual updates during a conversation:
+
 ```dart
-// Text message
-client.sendUserMessage('Hello, agent!');
+// Send a text message to the agent
+client.sendUserMessage('I need help with my order');
 
-// Contextual update (background information)
-client.sendContextualUpdate('User is viewing the checkout page');
+// Send contextual information (invisible to user, visible to agent)
+client.sendContextualUpdate('User is on order #12345 page');
 
-// User activity signal (e.g., typing indicator)
+// Send user activity signal, which will prevent the agent from speaking for ~2 seconds
+// Useful for when a user is e.g. typing a message
 client.sendUserActivity();
 ```
 
 ### Microphone Control
 
 ```dart
-// Mute
+// Mute the microphone
 await client.setMicMuted(true);
 
-// Unmute
+// Unmute the microphone
 await client.setMicMuted(false);
 
-// Toggle
+// Toggle mute state
 await client.toggleMute();
 
-// Check state
-bool isMuted = client.isMuted;
-```
-
-### Feedback
-
-```dart
-// Check if feedback can be sent
-if (client.canSendFeedback) {
-  // Thumbs up
-  client.sendFeedback(isPositive: true);
-
-  // Thumbs down
-  client.sendFeedback(isPositive: false);
+// Check current mute state
+if (client.isMuted) {
+  print('Microphone is muted');
 }
 ```
 
-### Client Tools
+### Feedback System
 
-Register client-side tools that the agent can invoke:
+Allow users to rate agent responses:
 
 ```dart
+// In your UI, show feedback buttons when available
+if (client.canSendFeedback) {
+  // User taps thumbs up
+  client.sendFeedback(isPositive: true);
+
+  // Or thumbs down
+  client.sendFeedback(isPositive: false);
+}
+
+// Listen for feedback state changes
+ConversationClient(
+  callbacks: ConversationCallbacks(
+    onCanSendFeedbackChange: ({required canSendFeedback}) {
+      setState(() {
+        // Update UI to show/hide feedback buttons
+      });
+    },
+  ),
+);
+```
+
+## Client Tools
+
+Register client-side tools that the agent can invoke to access device capabilities:
+
+```dart
+// Define a tool
 class GetLocationTool implements ClientTool {
   @override
   Future<ClientToolResult?> execute(Map<String, dynamic> parameters) async {
     try {
-      // Get device location
-      final location = await _getCurrentLocation();
+      final location = await Geolocator.getCurrentPosition();
 
       return ClientToolResult.success({
         'latitude': location.latitude,
         'longitude': location.longitude,
+        'accuracy': location.accuracy,
       });
     } catch (e) {
       return ClientToolResult.failure('Failed to get location: $e');
@@ -240,208 +403,390 @@ class GetLocationTool implements ClientTool {
   }
 }
 
-// Register the tool
+class LogMessageTool implements ClientTool {
+  @override
+  Future<ClientToolResult?> execute(Map<String, dynamic> parameters) async {
+    final message = parameters['message'] as String?;
+
+    if (message == null || message.isEmpty) {
+      return ClientToolResult.failure('Missing message parameter');
+    }
+
+    print('Agent logged: $message');
+
+    // For tools where no response is needed, don't return anything
+  }
+}
+
+// Register tools with the client
 final client = ConversationClient(
   clientTools: {
     'getUserLocation': GetLocationTool(),
     'logMessage': LogMessageTool(),
   },
   callbacks: ConversationCallbacks(
-    onUnhandledClientToolCall: (call) {
-      print('Unhandled tool: ${call.toolName}');
+    onUnhandledClientToolCall: (toolCall) {
+      print('Agent called unimplemented tool: ${toolCall.toolName}');
+      print('Parameters: ${toolCall.parameters}');
     },
   ),
 );
 ```
 
-### Callbacks
+Tool execution flow:
+1. Agent decides to invoke a tool
+2. SDK receives tool call request
+3. SDK looks up and executes the registered tool
+4. Tool returns success or failure result
+5. SDK sends result back to agent
+6. Agent continues conversation with the result
 
-All available callbacks:
+## Callbacks
+
+The SDK provides comprehensive callbacks for all conversation events:
 
 ```dart
 ConversationClient(
   callbacks: ConversationCallbacks(
-    // Connection
-    onConnect: ({required conversationId}) {},
-    onDisconnect: (details) {},
-    onStatusChange: ({required status}) {},
-    onError: (message, [context]) {},
+    // Connection lifecycle
+    onConnect: ({required conversationId}) {
+      print('Connected: $conversationId');
+    },
+    onDisconnect: (details) {
+      print('Disconnected: ${details.reason}');
+    },
+    onStatusChange: ({required status}) {
+      print('Status: ${status.name}');
+    },
+    onError: (message, [context]) {
+      print('Error: $message');
+    },
 
-    // Messages
-    onMessage: ({required message, required source}) {},
-    onModeChange: ({required mode}) {},
+    // Messages and transcripts
+    onMessage: ({required message, required source}) {
+      print('[${source.name}] $message');
+    },
+    onModeChange: ({required mode}) {
+      // Called when conversation mode changes
+      if (mode == ConversationMode.speaking) {
+        print('Agent started speaking');
+      } else {
+        print('Agent is listening');
+      }
+    },
+    onTentativeUserTranscript: ({required transcript, required eventId}) {
+      // Real-time transcription as user speaks
+      print('User speaking: $transcript');
+    },
+    onUserTranscript: ({required transcript, required eventId}) {
+      // Finalized user transcription
+      print('User said: $transcript');
+    },
+    onTentativeAgentResponse: ({required response}) {
+      // Agent's streaming text response
+      print('Agent composing: $response');
+    },
+    onAgentResponseCorrection: (correction) {
+      // When agent corrects its response
+      print('Agent corrected: $correction');
+    },
 
-    // Audio & VAD
-    onAudio: (base64Audio) {},
-    onVadScore: ({required vadScore}) {},
+    // Conversation state
+    onConversationMetadata: (metadata) {
+      print('Conversation ID: ${metadata.conversationId}');
+      print('Audio formats: ${metadata.agentOutputAudioFormat}');
+    },
 
-    // Events
-    onInterruption: (event) {},
-    onAgentChatResponsePart: (part) {},
-    onConversationMetadata: (metadata) {},
+    // Audio and voice activity
+    onVadScore: ({required vadScore}) {
+      // Voice activity detection score (0.0 to 1.0)
+      print('VAD score: $vadScore');
+    },
+    onInterruption: (event) {
+      print('User interrupted agent');
+    },
 
     // Feedback
-    onCanSendFeedbackChange: ({required canSendFeedback}) {},
+    onCanSendFeedbackChange: ({required canSendFeedback}) {
+      // Show/hide feedback buttons
+      setState(() {});
+    },
 
-    // Tools & MCP
-    onUnhandledClientToolCall: (toolCall) {},
-    onMcpToolCall: (toolCall) {},
-    onAgentToolResponse: (response) {},
+    // Tools
+    onUnhandledClientToolCall: (toolCall) {
+      print('Unhandled tool: ${toolCall.toolName}');
+    },
+    onAgentToolResponse: (response) {
+      print('Tool ${response.toolName} executed');
+    },
 
-    // Debug
-    onDebug: (data) {},
+    // MCP (Model Context Protocol)
+    onMcpToolCall: (toolCall) {
+      print('MCP tool: ${toolCall.toolName}');
+    },
+    onMcpConnectionStatus: (status) {
+      print('MCP integrations: ${status.integrations.length}');
+    },
+
+    // ASR (Automatic Speech Recognition)
+    onAsrInitiationMetadata: (metadata) {
+      print('ASR metadata: ${metadata}');
+    },
+
+    // Streaming response parts
+    onAgentChatResponsePart: (part) {
+      // Streaming text chunks: start, delta, or stop
+      print('Agent text [${part.type}]: ${part.text}');
+    },
+
+    // Debug (all raw events), very noisy
+    onDebug: (data) {
+      print('Debug: $data');
+    },
   ),
-)
-```
-
-### Reactive State
-
-The client extends `ChangeNotifier` for reactive updates:
-
-```dart
-_client.addListener(() {
-  setState(() {
-    // UI will rebuild when client state changes
-  });
-});
-
-// Access state properties
-ConversationStatus status = _client.status;
-bool isSpeaking = _client.isSpeaking;
-bool isMuted = _client.isMuted;
-String? conversationId = _client.conversationId;
-bool canSendFeedback = _client.canSendFeedback;
-ConversationMode mode = _client.mode;
-```
-
-## Custom Endpoints & Data Residency
-
-For self-hosted or region-specific deployments:
-
-```dart
-final client = ConversationClient(
-  apiEndpoint: 'https://api.eu.residency.elevenlabs.io',
-  websocketUrl: 'wss://livekit.rtc.eu.residency.elevenlabs.io',
 );
 ```
 
-**Important**: Both endpoints must point to the same geographic region to avoid authentication errors.
+## Reactive State Management
+
+The `ConversationClient` extends `ChangeNotifier`, making it easy to integrate with Flutter's reactive patterns:
+
+```dart
+class _MyWidgetState extends State<MyWidget> {
+  late ConversationClient _client;
+
+  @override
+  void initState() {
+    super.initState();
+    _client = ConversationClient();
+
+    // Listen to all state changes
+    _client.addListener(_onClientStateChanged);
+  }
+
+  void _onClientStateChanged() {
+    setState(() {
+      // Widget rebuilds when client state changes
+    });
+  }
+
+  @override
+  void dispose() {
+    _client.removeListener(_onClientStateChanged);
+    _client.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Access reactive state properties
+    return Column(
+      children: [
+        Text('Status: ${_client.status.name}'),
+        Text('Speaking: ${_client.isSpeaking}'),
+        Text('Muted: ${_client.isMuted}'),
+        if (_client.conversationId != null)
+          Text('ID: ${_client.conversationId}'),
+        if (_client.canSendFeedback)
+          Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.thumb_up),
+                onPressed: () => _client.sendFeedback(isPositive: true),
+              ),
+              IconButton(
+                icon: const Icon(Icons.thumb_down),
+                onPressed: () => _client.sendFeedback(isPositive: false),
+              ),
+            ],
+          ),
+      ],
+    );
+  }
+}
+```
+
+## Regional Deployments and Data Residency
+
+For self-hosted deployments or region-specific requirements:
+
+```dart
+final client = ConversationClient(
+  apiEndpoint: 'https://api.eu.elevenlabs.io',
+  websocketUrl: 'wss://livekit.rtc.eu.elevenlabs.io',
+);
+```
+
+**Important**: Both the API endpoint and WebSocket URL must point to the same geographic region to avoid authentication errors.
 
 ## API Reference
 
 ### ConversationClient
 
+#### Constructor
+
+```dart
+ConversationClient({
+  String? apiEndpoint,  // Default: 'https://api.elevenlabs.io'
+  String? websocketUrl, // Default: 'wss://livekit.rtc.elevenlabs.io'
+  ConversationCallbacks? callbacks,
+  Map<String, ClientTool>? clientTools,
+})
+```
+
 #### Properties
 
-- `status` - Current connection status
-- `isSpeaking` - Whether the agent is speaking
-- `mode` - Current mode (listening/speaking)
-- `conversationId` - Active conversation ID
-- `isMuted` - Microphone mute state
-- `canSendFeedback` - Whether feedback can be sent
+| Property | Type | Description |
+|----------|------|-------------|
+| `status` | `ConversationStatus` | Current connection status |
+| `isSpeaking` | `bool` | Whether the agent is currently speaking |
+| `isMuted` | `bool` | Whether the microphone is muted |
+| `conversationId` | `String?` | Unique identifier for the active conversation |
+| `canSendFeedback` | `bool` | Whether feedback can be sent for the last response |
 
 #### Methods
 
-- `startSession()` - Start a conversation
-- `endSession()` - End the conversation
-- `sendUserMessage()` - Send text message
-- `sendContextualUpdate()` - Send background context
-- `sendUserActivity()` - Signal user activity
-- `sendFeedback()` - Send thumbs up/down
-- `setMicMuted()` - Set mute state
-- `toggleMute()` - Toggle mute
-- `getId()` - Get conversation ID
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `startSession({...})` | `Future<void>` | Start a conversation session |
+| `endSession()` | `Future<void>` | End the current conversation |
+| `sendUserMessage(String)` | `void` | Send a text message |
+| `sendContextualUpdate(String)` | `void` | Send background context |
+| `sendUserActivity()` | `void` | Signal user activity |
+| `sendFeedback({required bool})` | `void` | Send feedback (like/dislike) |
+| `setMicMuted(bool)` | `Future<void>` | Set microphone mute state |
+| `toggleMute()` | `Future<void>` | Toggle microphone mute state |
+| `dispose()` | `void` | Clean up resources |
+
+#### startSession Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `agentId` | `String?` | * | Public agent ID |
+| `conversationToken` | `String?` | * | Signed token from your backend |
+| `userId` | `String?` | No | User identifier for analytics |
+| `overrides` | `ConversationOverrides?` | No | Session-specific configuration |
+| `customLlmExtraBody` | `Map<String, dynamic>?` | No | Custom LLM parameters |
+| `dynamicVariables` | `Map<String, dynamic>?` | No | Runtime variables for prompts |
+
+\* Either `agentId` or `conversationToken` must be provided
 
 ### Enums
 
 #### ConversationStatus
 
-- `disconnected` - Not connected
-- `connecting` - Connecting to agent
+- `disconnected` - Not connected to any agent
+- `connecting` - Connection in progress
 - `connected` - Active conversation
-- `disconnecting` - Closing connection
+- `disconnecting` - Disconnect in progress
 
 #### ConversationMode
 
-- `listening` - Agent is listening
+- `listening` - Agent is listening to user
 - `speaking` - Agent is speaking
 
 #### Role
 
-- `user` - User message
-- `ai` - Agent message
-
-## Examples
-
-Check out the [example app](example/) for a comprehensive demonstration of all features.
-
-## Compatibility
-
-This SDK maintains API compatibility with the ElevenLabs [Android SDK](https://github.com/elevenlabs/elevenlabs-android) and [React Native SDK](https://github.com/elevenlabs/elevenlabs-react-native):
-
-- Similar method names and signatures
-- Equivalent configuration models
-- Compatible event types
-- Shared protocol schema
-
-## Architecture
-
-```
-┌─────────────────────────────────────────┐
-│      ConversationClient                 │
-│  (ChangeNotifier for reactive state)    │
-└─────────────────┬───────────────────────┘
-                  │
-    ┌─────────────┼─────────────┐
-    │             │             │
-┌───▼────┐  ┌────▼────┐  ┌────▼────┐
-│LiveKit │  │ Message │  │ Message │
-│Manager │  │ Handler │  │ Sender  │
-└───┬────┘  └────┬────┘  └────┬────┘
-    │            │            │
-    └────────────┼────────────┘
-                 │
-        ┌────────▼────────┐
-        │   LiveKit Room  │
-        │  (WebRTC + Data)│
-        └─────────────────┘
-```
+- `user` - Message from the user
+- `ai` - Message from the agent
 
 ## Troubleshooting
 
-### Permission Denied
+### Microphone Permission Denied
 
-Ensure microphone permissions are granted in system settings.
+Ensure permissions are properly configured in platform files and granted by the user.
+
+**iOS**: Check Info.plist has NSMicrophoneUsageDescription
+**Android**: Check AndroidManifest.xml has RECORD_AUDIO permission
 
 ### Connection Failures
 
-- Verify agent ID is correct
-- Check network connectivity
-- Ensure firewall allows WebRTC
+- Verify your agent ID or conversation token is correct
+- Check network connectivity and firewall settings
+- Ensure WebRTC ports are not blocked (UDP 3478-3479, TCP 443)
+- For private agents, verify your backend token generation is correct
 
-### Audio Issues
+### Poor Audio Quality
 
-- Test microphone with other apps
-- Check LiveKit has audio permissions
-- Try toggling mute/unmute
+- Check microphone permissions
+- Verify device microphone is working in other apps
+- Check network bandwidth (voice requires steady connection)
+- Try on a different network to rule out firewall issues
+
+### Agent Not Responding
+
+- Verify the agent is properly configured in your ElevenLabs dashboard
+- Check that the agent has appropriate tools and knowledge base
+- Monitor the `onDebug` callback for detailed event logs
+- Check `onError` callback for specific error messages
+
+### Tool Calls Not Working
+
+- Ensure tool names match exactly between agent config and client registration
+- Verify ClientTool implementations return proper ClientToolResult
+- Check `onUnhandledClientToolCall` for tools the agent tried to call
+- Use `onDebug` to see the raw tool call messages
+
+## Testing
+
+```bash
+# Run tests
+flutter test
+
+# Run integration tests
+flutter test integration_test/
+
+# Run with coverage
+flutter test --coverage
+```
+
+## Platform Support
+
+| Platform | Supported | Min Version |
+|----------|-----------|-------------|
+| Android  | Yes       | API 21 (Android 5.0) |
+| iOS      | Yes       | iOS 13.0 |
+| Web      | Planned   | - |
+| macOS    | Planned   | - |
+| Windows  | Planned   | - |
+| Linux    | Planned   | - |
+
+## Compatibility
+
+This SDK maintains API compatibility with other ElevenLabs SDKs:
+
+- [ElevenLabs Android SDK](https://github.com/elevenlabs/elevenlabs-android)
+- [ElevenLabs React Native SDK](https://github.com/elevenlabs/elevenlabs-react-native)
+
+Shared features:
+- Similar method names and signatures
+- Compatible configuration models
+- Identical event types and structures
+- Common protocol schema based on AsyncAPI specification
 
 ## Contributing
 
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details on:
+
+- Code of conduct
+- Development setup
+- Pull request process
+- Coding standards
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
 ## Support
 
-- 📚 [Documentation](https://elevenlabs.io/docs)
-- 💬 [Discord Community](https://discord.gg/elevenlabs)
-- 📧 [Email Support](mailto:support@elevenlabs.io)
-- 🐛 [Issue Tracker](https://github.com/elevenlabs/elevenlabs-flutter/issues)
+- Documentation: [https://elevenlabs.io/docs](https://elevenlabs.io/docs)
+- Discord Community: [https://discord.gg/elevenlabs](https://discord.gg/elevenlabs)
+- Email Support: support@elevenlabs.io
+- Issue Tracker: [GitHub Issues](https://github.com/elevenlabs/elevenlabs-flutter/issues)
 
-## Related
+## Related Projects
 
 - [ElevenLabs Android SDK](https://github.com/elevenlabs/elevenlabs-android)
 - [ElevenLabs React Native SDK](https://github.com/elevenlabs/elevenlabs-react-native)
 - [LiveKit Flutter SDK](https://github.com/livekit/client-sdk-flutter)
+- [ElevenLabs API Documentation](https://elevenlabs.io/docs)

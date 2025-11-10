@@ -85,7 +85,7 @@ class LogMessageTool implements ClientTool {
       return ClientToolResult.failure('Missing message parameter');
     }
 
-    debugPrint('📝 Client Tool Log: $message');
+    debugPrint('Client Tool Log: $message');
 
     // Return null for fire-and-forget tools
     return null;
@@ -110,7 +110,7 @@ The example demonstrates all available callbacks:
 - `onConnect`: Connection established
 - `onDisconnect`: Connection closed
 - `onMessage`: Transcription or agent response received
-- `onModeChange`: Agent switches between listening/speaking
+- `onModeChange`: Agent starts or stops speaking
 - `onStatusChange`: Connection status changes
 - `onError`: Error occurred
 - `onCanSendFeedbackChange`: Feedback availability changed

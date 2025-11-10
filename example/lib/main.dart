@@ -18,6 +18,9 @@ class LogMessageTool implements ClientTool {
 
     // Log the message to console
     debugPrint('📢 Agent Tool Call - Log Message: $message');
+
+    // Fire-and-forget tool - no response needed
+    return null;
   }
 }
 
