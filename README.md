@@ -1,11 +1,15 @@
 ![hero](assets/hero.png)
 
-# ElevenLabs Flutter SDK
+# ElevenLabs Agents Flutter SDK
 
 [![pub package](https://img.shields.io/pub/v/elevenlabs_agents.svg)](https://pub.dev/packages/elevenlabs_agents)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 Official Flutter SDK for the [ElevenLabs Agents Platform](https://elevenlabs.io). Build voice-enabled applications with real-time bidirectional audio communication powered by WebRTC via LiveKit.
+
+## SDK status
+
+This SDK is in beta - core functionality should work as expected but some edge cases might not be supported. If something is missing for your integration please open up an issue in this repo.
 
 ## Features
 
