@@ -746,32 +746,6 @@ flutter test --coverage
 |----------|-----------|-------------|
 | Android  | Yes       | API 21 (Android 5.0) |
 | iOS      | Yes       | iOS 13.0 |
-| Web      | Planned   | - |
-| macOS    | Planned   | - |
-| Windows  | Planned   | - |
-| Linux    | Planned   | - |
-
-## Compatibility
-
-This SDK maintains API compatibility with other ElevenLabs SDKs:
-
-- [ElevenLabs Android SDK](https://github.com/elevenlabs/elevenlabs-android)
-- [ElevenLabs React Native SDK](https://github.com/elevenlabs/elevenlabs-react-native)
-
-Shared features:
-- Similar method names and signatures
-- Compatible configuration models
-- Identical event types and structures
-- Common protocol schema based on AsyncAPI specification
-
-## Contributing
-
-Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details on:
-
-- Code of conduct
-- Development setup
-- Pull request process
-- Coding standards
 
 ## License
 

@@ -51,6 +51,8 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>This app needs microphone access for voice conversations with AI agents</string>
 </dict>
 </plist>
 
