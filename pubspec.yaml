@@ -5,13 +5,13 @@ homepage: https://elevenlabs.io
 repository: https://github.com/elevenlabs/elevenlabs-flutter
 
 environment:
-  sdk: ^3.8.1
+  sdk: 3.8.1
   flutter: ">=1.17.0"
 
 dependencies:
   flutter:
     sdk: flutter
-  livekit_client: ^2.5.3
+  livekit_client: 2.4.3
   http: ^1.2.0
 
 dev_dependencies:
