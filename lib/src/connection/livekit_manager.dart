@@ -49,7 +49,7 @@ class LiveKitManager {
 
       final roomOptions = RoomOptions(
         defaultAudioPublishOptions: AudioPublishOptions(
-          audioBitrate: AudioPreset.speech,
+          audioBitrate: AudioPreset.music,
         ),
       );
 
