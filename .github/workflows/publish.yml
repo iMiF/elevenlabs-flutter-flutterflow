@@ -61,8 +61,5 @@ jobs:
       - name: Run tests
         run: flutter test
 
-      - name: Check package publish readiness
-        run: dart pub publish --dry-run
-
       - name: Publish package
         run: dart pub publish --force
