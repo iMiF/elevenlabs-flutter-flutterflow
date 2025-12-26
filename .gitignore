@@ -53,3 +53,6 @@ example/ios/Flutter/flutter_export_environment.sh
 example/ios/Flutter/ephemeral/
 example/ios/Runner/GeneratedPluginRegistrant.h
 example/ios/Runner/GeneratedPluginRegistrant.m
+
+# FVM Version Cache
+.fvm/
