@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2025-11-27
+
+### Changed
+
+- Enhanced disconnect reason tracking in `onDisconnect` callback. The callback now receives specific disconnect reasons: `"agent"` (when agent disconnects), `"user"` (when user ends session), or `"error"` (for network/connection errors).
+- Added `disconnectStream` to `LiveKitManager` for better disconnect event handling with reason tracking.
+
+## [0.2.0] - 2025-11-20
+
+### Changed
+
+- Relaxed Dart version requirements for the SDK. Now supports Dart versions 3 and up instead of being pinned to 3.9.2.
+
+
 ## [0.1.0] - 2025-11-10
 
 ### Added
@@ -39,4 +53,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - iOS 13.0+
 - Android API 21+
 
+[0.3.0]: https://github.com/elevenlabs/elevenlabs-flutter/releases/tag/v0.3.0
+[0.2.0]: https://github.com/elevenlabs/elevenlabs-flutter/releases/tag/v0.2.0
 [0.1.0]: https://github.com/elevenlabs/elevenlabs-flutter/releases/tag/v0.1.0
